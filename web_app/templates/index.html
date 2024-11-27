@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización de Sensores</title>
+    <!-- Bootstrap CSS para diseño -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<div class="container mt-5">
+    <h2>Visualización de Sensores</h2>
+
+    <!-- Formulario para seleccionar sensor y fecha -->
+    <form id="sensorForm">
+        <div class="form-group">
+            <label for="sensor_id">Seleccionar Sensor</label>
+            <select id="sensor_id" class="form-control">
+                <!-- El único valor disponible se selecciona por defecto -->
+                <option value="JDTE5847" selected>JDTE5847</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="fecha">Seleccionar Fecha</label>
+            <input type="date" id="fecha" class="form-control">
+        </div>
+        <div class="form-group">
+            <label for="hora">Seleccionar Hora (opcional)</label>
+            <input type="time" id="hora" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary">Mostrar Datos</button>
+    </form>
+    
+    
+    <!-- Gráfico -->
+    <canvas id="grafico" width="400" height="200" class="mt-5"></canvas>
+
+    <!-- Tabla -->
+    <table class="table mt-4" id="tabla-datos">
+        <thead>
+        <tr>
+            <th>ID Sensor</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Temperatura</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Los datos se insertarán aquí dinámicamente -->
+        </tbody>
+    </table>
+</div>
+
+<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>
