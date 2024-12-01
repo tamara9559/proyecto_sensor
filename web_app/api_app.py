@@ -1,114 +1,90 @@
 from flask import Flask, request, jsonify, render_template
-from DB import DB
+from google.cloud import firestore
+import os
 
+# Inicialización de Flask
 app = Flask(__name__)
 
-# Inicializar BD
-SERVICE_ACCOUNT_PATH = "credenciales/firebase_proyecto.json"
-COLLECTION_NAME = "sensor"
-db = DB(SERVICE_ACCOUNT_PATH, COLLECTION_NAME)
+# Configurar el archivo de credenciales de Firebase
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credenciales/firebase_proyecto.json"
 
+# Conexión a Firestore
+db = firestore.Client()
+collection_name = "sensores"  # Nombre de la colección en Firestore
 
-@app.route("/")
+# Ruta principal (Renderiza la página HTML principal)
+@app.route('/')
 def index():
-    """
-    Renderiza la página principal.
-    """
     return render_template("index.html")
 
-@app.route("/api/sensores", methods=["GET"])
+# Ruta para obtener sensores únicos
+@app.route('/api/sensores', methods=['GET'])
 def obtener_sensores():
-    """
-    Endpoint para obtener una lista única de sensores disponibles.
-    """
     try:
-        # Obtener los documentos de la colección "sensor"
-        sensores = db.db.collection("sensor").stream()
+        # Consultar Firestore para obtener los sensores únicos
+        sensores_ref = db.collection(collection_name)
+        sensores_docs = sensores_ref.stream()
 
-        # Extraer valores únicos de `idsensor`
-        sensores_data = set()
-        for sensor in sensores:
-            data = sensor.to_dict()
-            if "idsensor" in data:
-                sensores_data.add(data["idsensor"])  # Usar un conjunto para evitar duplicados
+        sensores_unicos = set(doc.to_dict().get("idsensor") for doc in sensores_docs)
+        sensores_unicos = list(filter(None, sensores_unicos))  # Eliminar valores nulos o vacíos
 
-        # Convertir el conjunto en una lista para enviarlo como JSON
-        sensores_unicos = [{"id": idsensor} for idsensor in sensores_data]
-
-        return jsonify({"sensores": sensores_unicos}), 200
+        return jsonify(sensores_unicos), 200
     except Exception as e:
+        print(f"Error en la API: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-
-@app.route("/api/datos", methods=["GET"])
-def obtener_datos():
-    """
-    Endpoint para obtener los datos de un sensor en una fecha (y hora) específica.
-    """
+# Ruta para registrar datos de sensores (POST)
+@app.route('/api/datos', methods=['POST'])
+def registrar_datos():
     try:
-        sensor_id = request.args.get('idsensor')
+        # Obtener datos enviados en el cuerpo de la solicitud
+        datos = request.json
+
+        # Validar datos obligatorios
+        if not all(k in datos for k in ("idsensor", "fecha", "hora", "temperatura")):
+            return jsonify({"error": "Faltan campos obligatorios"}), 400
+
+        # Insertar los datos en Firestore
+        db.collection(collection_name).add(datos)
+        return jsonify({"message": "Dato registrado exitosamente"}), 201
+    except Exception as e:
+        print(f"Error en la API: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Ruta para obtener datos filtrados (GET)
+@app.route('/api/datos', methods=['GET'])
+def obtener_datos():
+    try:
+        # Obtener parámetros de consulta
+        idsensor = request.args.get('idsensor')
         fecha = request.args.get('fecha')
-        hora = request.args.get('hora')  # Hora opcional
 
-        if not sensor_id or not fecha:
-            return jsonify({"error": "Se requiere 'idsensor' y 'fecha'."}), 400
+        # Consulta inicial a la colección
+        query = db.collection(collection_name)
 
-        # Consulta inicial por fecha y sensor
-        query = db.db.collection("sensor")\
-            .where("idsensor", "==", sensor_id)\
-            .where("fecha", "==", fecha)
+        # Aplicar filtros correctamente con argumentos posicionales
+        if idsensor:
+            query = query.where("idsensor", "==", idsensor)
+        if fecha:
+            query = query.where("fecha", "==", fecha)
 
-        # Si se proporciona una hora, añadir filtro
-        if hora:
-            query = query.where("hora", "==", hora)
+        # Ordenar los resultados por hora
+        query = query.order_by("hora", direction=firestore.Query.ASCENDING)
 
         # Ejecutar la consulta
-        datos = query.stream()
+        docs = query.stream()
+        resultados = [doc.to_dict() for doc in docs]
 
-        datos_resultados = [{
-            "idsensor": dato.get("idsensor"),
-            "fecha": dato.get("fecha"),
-            "hora": dato.get("hora"),
-            "temperatura": dato.get("temperatura")
-        } for dato in datos]
+        # Verificar si hay datos
+        if not resultados:
+            return jsonify({"message": "No se encontraron datos para los filtros aplicados"}), 200
 
-        return jsonify({"datos": datos_resultados}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-
-@app.route("/api/datos", methods=["POST"])
-def recibir_datos():
-    """
-    Endpoint para recibir datos del sensor.
-    """
-    try:
-        # Obtener datos enviados por el cliente (simulador)
-        datos = request.get_json()
-        
-        # Validar que los campos requeridos estén presentes
-        if not datos or "idsensor" not in datos or "temperatura" not in datos:
-            return jsonify({"error": "Datos inválidos. Se requiere 'idsensor' y 'temperatura'."}), 400
-
-        idsensor = datos["idsensor"]
-        temperatura = datos["temperatura"]
-
-        # Validar tipo de datos
-        if not isinstance(idsensor, str) or not isinstance(temperatura, (int, float)):
-            return jsonify({"error": "Tipos de datos inválidos."}), 400
-
-        # Registrar el dato en Firebase
-        doc_id = db.agregar_dato(idsensor, temperatura)
-
-        # Respuesta exitosa
-        return jsonify({"mensaje": "Dato registrado correctamente.", "id": doc_id}), 201
+        return jsonify(resultados), 200
 
     except Exception as e:
+        print(f"Error en la API: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-if __name__ == "__main__":
-    # Ejecutar la API en modo desarrollo
+# Ejecutar la aplicación Flask
+if __name__ == '__main__':
     app.run(debug=True)

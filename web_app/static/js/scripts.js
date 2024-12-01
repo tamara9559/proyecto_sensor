@@ -4,7 +4,6 @@ $("#sensorForm").submit(function (event) {
 
     const sensor_id = $("#sensor_id").val();
     const fecha = $("#fecha").val();
-    const hora = $("#hora").val(); // Nueva entrada para buscar por hora
 
     // Validar que los campos requeridos estén presentes
     if (!sensor_id || !fecha) {
@@ -15,26 +14,24 @@ $("#sensorForm").submit(function (event) {
     // Crear un objeto para los datos que vamos a enviar
     const dataToSend = { idsensor: sensor_id, fecha: fecha };
 
-    // Si la hora está seleccionada, añadirla al objeto
-    if (hora) {
-        dataToSend.hora = hora;
-    }
-
-    // Solicitar datos del sensor, fecha y hora seleccionados
+    // Solicitar datos del sensor y la fecha seleccionados
     $.ajax({
         url: "/api/datos",
         method: "GET",
-        data: dataToSend,  // Usamos el objeto con los parámetros
+        data: dataToSend,
         success: function (data) {
+            // Ordenar los datos por la hora (formato HH:MM:SS)
+            data.sort((a, b) => a.hora.localeCompare(b.hora));
+
             // Limpiar la tabla antes de agregar nuevos datos
             const tbody = $("#tabla-datos tbody");
             tbody.empty();
 
-            if (data.datos.length === 0) {
-                alert("No se encontraron datos para la fecha y hora seleccionadas.");
+            if (data.length === 0) {
+                alert("No se encontraron datos para la fecha seleccionada.");
             } else {
                 // Actualizar la tabla con los datos obtenidos
-                data.datos.forEach(function (dato) {
+                data.forEach(function (dato) {
                     tbody.append(
                         "<tr>" +
                         "<td>" + dato.idsensor + "</td>" +
@@ -45,15 +42,15 @@ $("#sensorForm").submit(function (event) {
                     );
                 });
 
-                // Generar el gráfico con los datos obtenidos
+                // Generar el gráfico con los datos ordenados
                 const ctx = document.getElementById("grafico").getContext("2d");
                 new Chart(ctx, {
                     type: "line",
                     data: {
-                        labels: data.datos.map(d => d.hora),  // Eje X: horas
+                        labels: data.map(d => d.hora),  // Eje X: horas
                         datasets: [{
                             label: "Temperatura",
-                            data: data.datos.map(d => d.temperatura),  // Eje Y: temperaturas
+                            data: data.map(d => d.temperatura),  // Eje Y: temperaturas
                             borderColor: "rgba(75, 192, 192, 1)",
                             fill: false
                         }]
