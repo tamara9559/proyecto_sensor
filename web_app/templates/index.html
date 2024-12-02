@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualización de Sensores</title>
-    <!-- Bootstrap CSS para diseño -->
+    <!-- Bootstrap CSS para diseño responsivo -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Estilos personalizados -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jQuery para manipulación del DOM y AJAX -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
@@ -18,29 +19,32 @@
 
     <!-- Formulario para seleccionar sensor y fecha -->
     <form id="sensorForm">
+        <!-- Selector del ID del sensor -->
         <div class="form-group">
             <label for="sensor_id">Seleccionar Sensor</label>
             <select id="sensor_id" class="form-control">
-                <!-- El único valor disponible se selecciona por defecto -->
+                <!-- Valor por defecto del sensor -->
                 <option value="JDTE5847" selected>JDTE5847</option>
             </select>
         </div>
+        <!-- Campo de selección de fecha -->
         <div class="form-group">
             <label for="fecha">Seleccionar Fecha</label>
             <input type="date" id="fecha" class="form-control">
         </div>
+        <!-- Campo de selección de hora (opcional) -->
         <div class="form-group">
             <label for="hora">Seleccionar Hora (opcional)</label>
             <input type="time" id="hora" class="form-control">
         </div>
+        <!-- Botón para enviar el formulario -->
         <button type="submit" class="btn btn-primary">Mostrar Datos</button>
     </form>
     
-    
-    <!-- Gráfico -->
+    <!-- Contenedor para el gráfico -->
     <canvas id="grafico" width="400" height="200" class="mt-5"></canvas>
 
-    <!-- Tabla -->
+    <!-- Tabla para mostrar datos del sensor -->
     <table class="table mt-4" id="tabla-datos">
         <thead>
         <tr>
@@ -51,11 +55,12 @@
         </tr>
         </thead>
         <tbody>
-        <!-- Los datos se insertarán aquí dinámicamente -->
+        <!-- Las filas de la tabla se generarán dinámicamente con JavaScript -->
         </tbody>
     </table>
 </div>
 
+<!-- Archivo de scripts personalizados -->
 <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 </body>
 </html>
